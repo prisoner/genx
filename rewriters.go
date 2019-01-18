@@ -136,6 +136,7 @@ func (g *GenX) rewriteFuncType(node *xast.Node) *xast.Node {
 				return node.Delete()
 			}
 			p.Type = nn.Node().(ast.Expr)
+			// log.Printf("p type:%+v\n", reflect.TypeOf(p))
 			if rt := getIdent(p.Type); rt != nil {
 				g.curReturnTypes = append(g.curReturnTypes, rt.Name)
 			}
@@ -191,6 +192,10 @@ func (g *GenX) rewriteReturnStmt(node *xast.Node) *xast.Node {
 	n := node.Node().(*ast.ReturnStmt)
 	for i, r := range n.Results {
 		if rt := getIdent(r); rt != nil && rt.Name == "nil" {
+			// log.Printf("rewriteReturnStmt: rt=%+v, curReturnTypes:%+v\n", rt, g.curReturnTypes)
+			if i >= len(g.curReturnTypes) {
+				continue
+			}
 			crt := cleanUpName.ReplaceAllString(g.curReturnTypes[i], "")
 			if _, ok := g.zeroTypes[crt]; ok {
 				g.zeroTypes[crt] = true

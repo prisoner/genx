@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/OneOfOne/cli"
-	"github.com/OneOfOne/genx"
+	"github.com/prisoner/genx"
+	"github.com/urfave/cli"
 )
 
 type sflags []*[2]string
@@ -32,16 +32,15 @@ func flattenFlags(in []string) (out sflags) {
 func main() {
 	log.SetFlags(log.Lshortfile)
 	cli.VersionFlag = &cli.BoolFlag{
-		Name:    "version",
-		Aliases: []string{"V"},
-		Usage:   "print the version",
+		Name:  "version",
+		Usage: "print the version",
 	}
 
 	app := &cli.App{
 		Name:    "genx",
 		Usage:   "Generics For Go, Yet Again.",
 		Version: "v0.5",
-		Authors: []*cli.Author{{
+		Authors: []cli.Author{{
 			Name:  "Ahmed <OneOfOne> W.",
 			Email: "oneofone+genx <a.t> gmail <dot> com",
 		},
@@ -52,52 +51,44 @@ func main() {
 				Usage: "alias for -pkg github.com/OneOfOne/genx/seeds/`seed-name`",
 			},
 			&cli.StringFlag{
-				Name:    "in",
-				Aliases: []string{"f"},
-				Usage:   "`file` to process, use `-` to process stdin.",
+				Name:  "in,f",
+				Usage: "`file` to process, use `-` to process stdin.",
 			},
 
 			&cli.StringFlag{
-				Name:    "package",
-				Aliases: []string{"pkg"},
-				Usage:   "`package` to process.",
+				Name:  "package,pkg",
+				Usage: "`package` to process.",
 			},
 
 			&cli.StringFlag{
-				Name:    "name",
-				Aliases: []string{"n"},
-				Usage:   "package `name` to use for output, uses the input package's name by default.",
+				Name:  "name,n",
+				Usage: "package `name` to use for output, uses the input package's name by default.",
 			},
 
 			&cli.StringSliceFlag{
-				Name:    "type",
-				Aliases: []string{"t"},
-				Usage:   "generic `type` names to remove or rename (ex: -t 'KV=string,KV=interface{}' -t RemoveThisType).",
+				Name:  "type,t",
+				Usage: "generic `type` names to remove or rename (ex: -t 'KV=string,KV=interface{}' -t RemoveThisType).",
 			},
 
 			&cli.StringSliceFlag{
-				Name:    "selector",
-				Aliases: []string{"s"},
-				Usage:   "`selector`s to remove or rename (ex: -s 'cm.HashFn=hashers.Fnv32' -s 'x.Call=Something').",
+				Name:  "selector,s",
+				Usage: "`selector`s to remove or rename (ex: -s 'cm.HashFn=hashers.Fnv32' -s 'x.Call=Something').",
 			},
 
 			&cli.StringSliceFlag{
-				Name:    "field",
-				Aliases: []string{"fld"},
-				Usage:   "struct `field`s to remove or rename (ex: -fld HashFn -fld privateFunc=PublicFunc).",
+				Name:  "field,fld",
+				Usage: "struct `field`s to remove or rename (ex: -fld HashFn -fld privateFunc=PublicFunc).",
 			},
 
 			&cli.StringSliceFlag{
-				Name:    "func",
-				Aliases: []string{"fn"},
-				Usage:   "`func`tions to remove or rename (ex: -fn NotNeededFunc -fn Something=SomethingElse).",
+				Name:  "func,fn",
+				Usage: "`func`tions to remove or rename (ex: -fn NotNeededFunc -fn Something=SomethingElse).",
 			},
 
 			&cli.StringFlag{
-				Name:    "out",
-				Aliases: []string{"o"},
-				Value:   "/dev/stdout",
-				Usage:   "output dir if parsing a package or output filename if you want the output to be merged.",
+				Name:  "out,o",
+				Value: "/dev/stdout",
+				Usage: "output dir if parsing a package or output filename if you want the output to be merged.",
 			},
 
 			&cli.StringSliceFlag{
@@ -116,9 +107,8 @@ func main() {
 			},
 
 			&cli.BoolFlag{
-				Name:    "verbose",
-				Aliases: []string{"v"},
-				Usage:   "verbose output",
+				Name:  "verbose,v",
+				Usage: "verbose output",
 			},
 		},
 		Action: runGen,
@@ -211,14 +201,14 @@ func runGen(c *cli.Context) error {
 	if inPkg != "" {
 		out, err := goListThenGet(c, g.BuildTags, inPkg)
 		if err != nil {
-			return cli.Exit(err, 2)
+			return cli.NewExitError(err, 2)
 		}
 
 		inPkg = out
 		pkg, err := g.ParsePkg(inPkg, false)
 
 		if err != nil {
-			return cli.Exit(fmt.Sprintf("error parsing package (%s): %v\n", inPkg, err), 1)
+			return cli.NewExitError(fmt.Sprintf("error parsing package (%s): %v\n", inPkg, err), 1)
 		}
 
 		if mergeFiles {
@@ -228,24 +218,24 @@ func runGen(c *cli.Context) error {
 		}
 
 		if err != nil {
-			return cli.Exit(err, 1)
+			return cli.NewExitError(err, 1)
 		}
 	} else if inFile := c.String("in"); inFile != "" {
 		if inFile != "-" && inFile != "/dev/stdin" {
 			out, err := goListThenGet(c, g.BuildTags, inFile)
 			if err != nil {
-				return cli.Exit(err, 2)
+				return cli.NewExitError(err, 2)
 			}
 			inFile = out
 		}
 
 		pf, err := g.Parse(inFile, nil)
 		if err != nil {
-			return cli.Exit(fmt.Sprintf("error parsing file (%s): %v\n%s", inFile, err, pf.Src), 1)
+			return cli.NewExitError(fmt.Sprintf("error parsing file (%s): %v\n%s", inFile, err, pf.Src), 1)
 		}
 
 		if err := pf.WriteFile(outPath); err != nil {
-			return cli.Exit(err, 1)
+			return cli.NewExitError(err, 1)
 		}
 	} else {
 		log.Println(c.FlagNames())
@@ -254,13 +244,15 @@ func runGen(c *cli.Context) error {
 
 	return nil
 }
+
 func execCmd(ctx *cli.Context, c string, args ...string) (string, error) {
 	cmd := exec.Command(c, args...)
 	if ctx.Bool("verbose") {
 		log.Printf("executing: %s %s", c, strings.Join(args, " "))
 	}
-	out, err := cmd.CombinedOutput()
-	return strings.TrimSpace(string(out)), err
+	out, err := cmd.Output()
+	ret := strings.TrimSpace(string(out))
+	return ret, err
 }
 
 func goListThenGet(ctx *cli.Context, tags []string, path string) (out string, err error) {
@@ -282,6 +274,7 @@ func goListThenGet(ctx *cli.Context, tags []string, path string) (out string, er
 	listArgs := append([]string{"list", "-f", "{{.Dir}}"}, args...)
 
 	if out, err = execCmd(ctx, "go", listArgs...); err != nil && strings.Contains(out, "cannot find package") {
+		// log.Printf("err %+v, out =%s\n", err, out)
 		if !ctx.Bool("get") {
 			out = fmt.Sprintf("`%s` not found and `--get` isn't specified.", path)
 			return

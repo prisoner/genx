@@ -1,12 +1,10 @@
-package genx_test
+package genx
 
 import (
 	"io/ioutil"
 	"log"
 	"regexp"
 	"testing"
-
-	"github.com/OneOfOne/genx"
 )
 
 func init() {
@@ -69,7 +67,7 @@ func TestAllTypes(t *testing.T) {
 	fatalIf(t, err)
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			g := genx.New("", tc.Input)
+			g := New("", tc.Input)
 			pf, err := g.Parse("src.go", src)
 			if err != nil {
 				t.Errorf("%+v\n%s", err, pf.Src)
